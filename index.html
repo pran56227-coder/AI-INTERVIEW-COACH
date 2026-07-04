@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InterviewAI Pro</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>🚀 InterviewAI Pro</h1>
+    <p class="sub">🧠 AI Interview Simulator</p>
+
+    <select id="role">
+        <option value="Python Developer">🐍 Python Developer</option>
+        <option value="Java Developer">☕ Java Developer</option>
+        <option value="Backend Developer">🧱 Backend Developer</option>
+        <option value="AI/ML Engineer">🤖 AI/ML Engineer</option>
+    </select>
+
+    <button onclick="startInterview()">🎯 Start Interview</button>
+
+    <div id="chatBox" class="chat-box"></div>
+
+    <textarea id="answer" placeholder="Type or speak your answer..."></textarea>
+
+    <button onclick="sendAnswer()">🚀 Submit</button>
+    <button onclick="startVoice()">🎤 Speak</button>
+
+</div>
+
+<script src="script.js"></script>
+
+</body>
+</html>
