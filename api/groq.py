@@ -1,6 +1,7 @@
 from http.server import BaseHTTPRequestHandler
 import json
 import os
+import re
 from groq import Groq
 
 # Initialize the Groq client
@@ -13,15 +14,14 @@ class handler(BaseHTTPRequestHandler):
         request_data = json.loads(post_data.decode('utf-8'))
         prompt = request_data.get('prompt', '')
 
-        # Check if this is a question generation request
         is_generation = "Generate 5 interview questions" in prompt
 
-        # Adapt the system instructions to guarantee valid JSON object shapes
         if is_generation:
             system_prompt = (
-                "You are an expert technical interviewer. You must generate 5 interview questions. "
+                "You are an expert technical interviewer. Generate 5 interview questions. "
                 "Return your response strictly as a JSON object with a single key named 'questions' "
-                "containing an array of strings. Example: {\"questions\": [\"Q1\", \"Q2\"]}"
+                "containing an array of strings. Example: {\"questions\": [\"Q1\", \"Q2\"]}. "
+                "Do not include any text outside the JSON object structure."
             )
         else:
             system_prompt = (
@@ -40,19 +40,38 @@ class handler(BaseHTTPRequestHandler):
                 response_format={"type": "json_object"}
             )
             
-            ai_response = chat_completion.choices[0].message.content
+            ai_response = chat_completion.choices[0].message.content.strip()
             
-            # TRANSLATION LAYER: Convert the object back into a flat array string for the frontend script
+            # --- FAIL-SAFE TRANSLATION & CLEANING LAYER ---
             if is_generation:
+                # 1. Strip away any accidental markdown wrapping if present
+                clean_text = re.sub(r"json|", "", ai_response).strip()
+                
                 try:
-                    parsed_json = json.loads(ai_response)
+                    parsed_json = json.loads(clean_text)
                     if "questions" in parsed_json:
-                        # Re-stringfy just the flat list element so script.js is completely happy
                         ai_response = json.dumps(parsed_json["questions"])
+                    elif isinstance(parsed_json, list):
+                        ai_response = json.dumps(parsed_json)
                 except Exception:
-                    pass # Fallback to original text if parsing fails
+                    # 2. Fallback: If it completely failed parsing, use Regex to find the first array structure [...]
+                    array_match = re.search(r"\[\s*.?\s\]", clean_text, re.DOTALL)
+                    if array_match:
+                        ai_response = array_match.group(0)
+                    else:
+                        # 3. Double Fallback: Try to find a curly brace structure {...} and look for the list inside
+                        object_match = re.search(r"\{\s*.?\s\}", clean_text, re.DOTALL)
+                        if object_match:
+                            try:
+                                nested_json = json.loads(object_match.group(0))
+                                for key in nested_json:
+                                    if isinstance(nested_json[key], list):
+                                        ai_response = json.dumps(nested_json[key])
+                                        break
+                            except Exception:
+                                pass
 
-            # Construct the final response payload matching the frontend template structure
+            # Construct the final response payload matching your frontend structure
             response_body = {
                 "candidates": [
                     {
