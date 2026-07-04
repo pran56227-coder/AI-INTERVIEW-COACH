@@ -15,7 +15,8 @@ client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 class InterviewRequest(BaseModel):
     prompt: str
 
-# UPDATED: Includes the explicit "/api" prefix to match Vercel's request handling
+# STACKED DECORATORS: Catches the incoming request regardless of Vercel routing variations
+@app.post("/groq")
 @app.post("/api/groq")
 async def handle_interview(request: InterviewRequest):
     try:
